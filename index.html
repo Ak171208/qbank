@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My Library</title>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f6f7fb;
+  color: #222;
+}
+
+.container {
+  max-width: 700px;
+  margin: 65px auto;
+  padding: 20px;
+}
+
+h1 { font-size: 30px; margin-bottom: 8px; }
+.subtitle { color: #888; margin-bottom: 30px; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+button.category {
+  border: 1px solid #e7e8ed;
+  background: white;
+  border-radius: 13px;
+  padding: 20px 12px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: .2s;
+  color: #333;
+}
+
+button.category:hover {
+  border-color: #3978ed;
+  transform: translateY(-2px);
+}
+
+button.category.active {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+
+/* Floating Modal Backdrop */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.modal-overlay.open {
+  display: flex;
+  opacity: 1;
+}
+
+/* Floating Window */
+.modal-window {
+  background: white;
+  width: 100%;
+  max-width: 540px;
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  transform: scale(0.95) translateY(10px);
+  transition: transform 0.2s ease;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.modal-overlay.open .modal-window {
+  transform: scale(1) translateY(0);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f1f5;
+}
+
+.modal-header h2 {
+  font-size: 20px;
+  margin: 0;
+}
+
+.close-btn {
+  background: #f3f4f6;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #555;
+  transition: 0.15s;
+}
+
+.close-btn:hover {
+  background: #e5e7eb;
+  color: #111;
+}
+
+.subcategory {
+  text-decoration: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f9fafc;
+  border: 1px solid #e7e8ed;
+  border-radius: 12px;
+  padding: 16px;
+  color: #333;
+  font-size: 14px;
+  transition: 0.15s;
+}
+
+.subcategory:hover {
+  border-color: #3978ed;
+  background: #f0f5ff;
+  transform: translateY(-1px);
+}
+
+@media(max-width:480px) {
+  .container { margin: 30px auto; }
+  h1 { font-size: 25px; }
+  .grid { gap: 10px; }
+  .modal-window .grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+  <h1>My Library</h1>
+  <div class="subtitle">Choose a category to continue</div>
+  <div class="grid" id="categories"></div>
+</div>
+
+<!-- Floating Window Overlay -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-window">
+    <div class="modal-header">
+      <h2 id="categoryTitle"></h2>
+      <button class="close-btn" id="closeModal" aria-label="Close">✕</button>
+    </div>
+    <div class="grid" id="links"></div>
+  </div>
+</div>
+
+<script>
+// EDIT YOUR CATEGORIES AND LINKS HERE
+const library = {
+  "Medicine": [
+    {name:"Cardiology", url:"https://example.com/1"},
+    {name:"Neurology", url:"https://example.com/2"},
+    {name:"Gastroenterology", url:"https://example.com/3"},
+    {name:"Respiratory", url:"https://example.com/4"},
+    {name:"Endocrinology", url:"https://example.com/5"}
+  ],
+  "Surgery": [
+    {name:"General Surgery", url:"https://example.com/6"},
+    {name:"Orthopaedics", url:"https://example.com/7"},
+    {name:"Urology", url:"https://example.com/8"},
+    {name:"Neurosurgery", url:"https://example.com/9"}
+  ],
+  "Paediatrics": [
+    {name:"Neonatology", url:"https://example.com/10"},
+    {name:"Growth & Development", url:"https://example.com/11"},
+    {name:"Paediatric Emergencies", url:"https://example.com/12"}
+  ],
+  "Ophthalmology": [
+    {name:"Anatomy", url:"https://example.com/13"},
+    {name:"Retina", url:"https://example.com/14"},
+    {name:"Glaucoma", url:"https://example.com/15"}
+  ],
+  "Other": [
+    {name:"Collection 1", url:"https://example.com/16"},
+    {name:"Collection 2", url:"https://example.com/17"}
+  ]
+};
+
+const categories = document.getElementById("categories");
+const modalOverlay = document.getElementById("modalOverlay");
+const closeModalBtn = document.getElementById("closeModal");
+
+function closeModal() {
+  modalOverlay.classList.remove("open");
+  document.querySelectorAll(".category").forEach(b => b.classList.remove("active"));
+}
+
+// Create main buttons
+Object.keys(library).forEach(category => {
+  const btn = document.createElement("button");
+  btn.className = "category";
+  btn.textContent = "📁 " + category;
+
+  btn.onclick = () => {
+    document.querySelectorAll(".category").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+
+    document.getElementById("categoryTitle").textContent = "📁 " + category;
+
+    const links = document.getElementById("links");
+    links.innerHTML = "";
+
+    library[category].forEach(item => {
+      const a = document.createElement("a");
+      a.className = "subcategory";
+      a.href = item.url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.innerHTML = `<span>${item.name}</span><span>↗</span>`;
+      links.appendChild(a);
+    });
+
+    modalOverlay.classList.add("open");
+  };
+
+  categories.appendChild(btn);
+});
+
+// Close when clicking the X button
+closeModalBtn.onclick = closeModal;
+
+// Close when clicking outside the floating window
+modalOverlay.onclick = (e) => {
+  if (e.target === modalOverlay) closeModal();
+};
+
+// Close when pressing the Escape key
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeModal();
+});
+</script>
+</body>
+</html>
